@@ -4,7 +4,7 @@ Created on: 20/08/2016 00:02
 """
 from setuptools import setup, find_packages
 
-import pysshtun as pkg
+import pysshtun.version as pkg
 
 
 setup(
