@@ -94,7 +94,7 @@ def host_stop(host: Host):
 
 def iptables_rule(rule: Port):
     rule = "OUTPUT -o eth0 -p tcp -d {rule.hostname} --dport {rule.remote_port} -j DNAT --to-destination {rule.local_ad" \
-           "dr}:{rule.local_port} -m comment --comment 'sshtun'".format(rule=rule)
+           "dr}:{rule.local_port} -m comment --comment sshtun".format(rule=rule)
 
     return rule.split(' ')
 
