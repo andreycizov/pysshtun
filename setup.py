@@ -2,16 +2,19 @@
 Author: Andrey Cizov (acizov@gmail.com)
 Created on: 20/08/2016 00:02
 """
+
+import sys
+import os
 from setuptools import setup, find_packages
 
-import pysshtun.version as pkg
-
+pkg = {}
+exec(compile(open(os.path.join(sys.path[0], 'pysshtun', 'version.py')).read(), filename='<version>', mode='exec'), pkg, pkg)
 
 setup(
     name='pysshtun',
-    version=pkg.__version__,
-    author=pkg.__author__,
-    author_email=pkg.__email__,
+    version=pkg['__version__'],
+    author=pkg['__author__'],
+    author_email=pkg['__email__'],
     packages=find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests')),
     description='',
     keywords='',
