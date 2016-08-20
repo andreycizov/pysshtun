@@ -17,7 +17,8 @@ def main():
     parser = argparse.ArgumentParser(description='sshtun')
 
     parser.add_argument('-P', dest='ports', action='append', default=[])
-    parser.add_argument('-t', dest='sleep', default=1, type=float)
+    parser.add_argument('--no-iptables', dest='iptables', action='store_false', default=True)
+    parser.add_argument('-t', dest='sleep', default=5., type=float)
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -41,15 +42,17 @@ def main():
         for host in hosts:
             host_stop(host)
 
-        for rule in iptables_rules:
-            iptables_delete(rule)
+        if args['iptables']:
+            for rule in iptables_rules:
+                iptables_delete(rule)
 
     for host in hosts:
         for port in host.ports:
             iptables_rules.append(iptables_rule(port))
 
-    for rule in iptables_rules:
-        iptables_create(rule)
+    if args['iptables']:
+        for rule in iptables_rules:
+            iptables_create(rule)
 
     atexit.register(stop_hosts)
 

@@ -1,5 +1,6 @@
 import enum
 import functools
+import os
 import subprocess
 import psutil
 import logging
@@ -36,7 +37,7 @@ class Host:
         return str(self)
 
     def __str__(self):
-        return 'Host<{0.status}, {0.ssh_alias}, {0.ports}, {0.pid}>'.format(self)
+        return 'Host<{0.status}, {0.ssh_alias}, {0.ports}, {pid}>'.format(self, pid=self.pid.pid if self.pid else None)
 
 
 class Status(enum.Enum):
@@ -46,15 +47,28 @@ class Status(enum.Enum):
     stopped = 'STOPPED'
 
 
+def check_pid(pid):
+    """ Check For the existence of a unix pid. """
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
+
+
 def host_sync_status(host: Host):
     assert host.status in [Status.running, Status.started, Status.init]
 
     # logger.debug('Syncing host status = {}'.format(host))
 
+    # if host.pid:
+    #     print(subprocess.Popen(host.pid).poll())
+
     if host.status in [Status.init, Status.stopped]:
         pass
     else:
-        if psutil.pid_exists(host.pid):
+        if host.pid.poll() is None:
             host.status = Status.running
         else:
             host.status = Status.stopped
@@ -78,18 +92,22 @@ def host_start(host: Host):
     port_mappings = functools.reduce(lambda a, b: a + b,
                                      [['-L', x] for x in [x.notate() for x in host.ports]], [])
 
-    args = ['ssh', '-N', '-o', 'ExitOnForwardFailure=yes'] + port_mappings + [host.ssh_alias]
+    opts = ['-o', 'PasswordAuthentication=no', '-o', 'ExitOnForwardFailure=yes', '-o', 'ConnectTimeout=5', '-o', 'IdentitiesOnly=yes']
+
+    args = ['ssh', '-N'] + opts + port_mappings + [host.ssh_alias]
 
     logger.info('Starting process with args = `{}`'.format(' '.join(args)))
 
-    host.pid = subprocess.Popen(args).pid
+    # host.pid = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+    host.pid = subprocess.Popen(args)
+
     host.status = Status.started
 
 
 def host_stop(host: Host):
     if host.status is Status.running:
         logger.info('Host {} is being stopped'.format(host))
-        psutil.Process(host.pid).kill()
+        host.pid.terminate()
 
 
 def iptables_rule(rule: Port):
@@ -101,11 +119,11 @@ def iptables_rule(rule: Port):
 
 def iptables_create(rule):
     cmd = ['sudo', 'iptables', '-t', 'nat', '-A'] + rule
-    subprocess.run(cmd)
+    subprocess.check_call(cmd)
     logger.debug('{}'.format(' '.join(cmd)))
 
 
 def iptables_delete(rule):
     cmd = ['sudo', 'iptables', '-t', 'nat', '-D'] + rule
-    subprocess.run(cmd)
+    subprocess.check_call(cmd)
     logger.debug('{}'.format(' '.join(cmd)))
